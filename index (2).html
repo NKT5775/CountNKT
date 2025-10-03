@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>King Of Word — Word Counter Pro (Final Version)</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1220;
+    --panel:#0f1620; --card:#111820;
+    --text:#f0f4f8; --muted:#b8c5d3;
+    --accent:#0d6efd; --accent2:#0dcaf0;
+    --glow: rgba(13,110,253,0.12);
+    --radius:12px;
+    --shadow:0 12px 30px rgba(2,6,23,0.6);
+    font-family:"Poppins",system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+  }
+  body.light{
+    --bg:#f4f7fa; --panel:#ffffff; --card:#f8f9fb;
+    --text:#0a0a0a; --muted:#4e555e;
+    --accent:#0d6efd; --accent2:#0dcaf0;
+    --glow: rgba(13,110,253,0.12);
+    --shadow:0 10px 30px rgba(2,6,23,0.06);
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 var(--glow); } 70% { box-shadow: 0 0 0 10px rgba(13,110,253,0); } 100% { box-shadow: 0 0 0 0 rgba(13,110,253,0); } }
+  
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+  .app{min-height:100vh;display:grid;grid-template-columns:58% 42%;gap:18px;padding:18px; animation: fadeIn 0.6s ease-out forwards; position: relative; overflow-x: hidden;}
+  .editor,.panel{background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px; transition: transform 0.2s, box-shadow 0.2s; }
+  .editor{display:flex;flex-direction:column;height:calc(100vh - 36px)}
+  .editor-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:12px}
+  .brand{font-weight:700;color:var(--accent);font-size:18px}
+  .controls{display:flex;gap:8px;align-items:center;position:relative;}
+  textarea#textarea{flex:1;width:100%;padding:18px;border-radius:12px;border:2px solid transparent;background:var(--card);color:var(--text);font-size:16px;line-height:1.6;resize:vertical;min-height:220px;transition:box-shadow .22s,border-color .18s}
+  textarea#textarea:focus{outline:none;box-shadow:0 12px 40px var(--glow);border-color:rgba(0,0,0,0.06)}
+  .toolbar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+  .btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:600;display:inline-flex;gap:8px;align-items:center; transition: transform 0.2s, box-shadow 0.2s;}
+  .btn:hover{transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.15);}
+  .btn.secondary{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,0.04)}
+  .btn.small{padding:6px 8px;font-size:13px}
+  .panel{height:calc(100vh - 36px);overflow:auto}
+  .grid-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px}
+  .stat{background:var(--card);padding:12px;border-radius:10px;text-align:center;transition:transform .18s,box-shadow .18s}
+  .stat:hover {transform: translateY(-5px); box-shadow: 0 10px 25px var(--glow);}
+  .num{font-weight:700;color:var(--accent);font-size:20px; transition: color 0.3s;}
+  .label{color:var(--muted);font-size:13px;margin-top:6px}
+  .section{margin-bottom:18px}
+  .tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+  .keyword-list{list-style:none;padding:0;margin:0}
+  .keyword-list li{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid rgba(255,255,255,0.02)}
+  .bar{height:8px;background:rgba(255,255,255,0.03);border-radius:6px;overflow:hidden;width:120px;margin-left:8px}
+  .bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width .6s}
+  .small{font-size:13px;color:var(--muted)}
+  select {padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:var(--card);color:var(--text);}
+
+  /* Off-canvas Menu Styles */
+  .extras-panel {
+      position: fixed; top: 0; right: 0; width: 42%; height: 100%;
+      background: var(--bg); padding: 18px;
+      box-shadow: -10px 0 30px rgba(0,0,0,0.25);
+      z-index: 1000;
+      transform: translateX(100%);
+      transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      overflow-y: auto;
+  }
+  .extras-panel.show { transform: translateX(0); }
+  .extras-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .extras-panel-header h3 { margin: 0; color: var(--accent); }
+  .close-btn { font-size: 24px; cursor: pointer; background: none; border: none; color: var(--muted); }
+  #overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      z-index: 999;
+      opacity: 0; visibility: hidden;
+      transition: opacity 0.4s, visibility 0.4s;
+  }
+  #overlay.show { opacity: 1; visibility: visible; }
+  
+  /* Menu Hint */
+  #toggleExtras.pulse { animation: pulse 2s infinite; }
+  .menu-hint {
+      position: absolute; right: 0; top: 120%;
+      background: var(--accent); color: white; padding: 8px 12px; border-radius: 8px;
+      font-size: 13px; font-weight: 500; z-index: 10; width: max-content;
+      opacity: 0; visibility: hidden; transform: translateY(10px); transition: all 0.3s ease;
+  }
+  .menu-hint.show { opacity: 1; visibility: visible; transform: translateY(0); }
+  .menu-hint::after {
+      content: ''; position: absolute; bottom: 100%; right: 18px;
+      border-width: 6px; border-style: solid; border-color: transparent transparent var(--accent) transparent;
+  }
+
+  @media (max-width:900px){
+    .app{grid-template-columns:1fr;padding:12px}
+    .editor{height:auto}.panel{height:auto}
+    .extras-panel { width: 85%; }
+  }
+</style>
+</head>
+<body class="light">
+
+<div class="app" id="app">
+  <div class="editor">
+    <div class="editor-header">
+      <div class="brand">CountNKT</div>
+      <div class="controls">
+        <select id="uiLang" title="Language"></select>
+        <button id="themeToggle" class="btn secondary small" title="Toggle theme">🌓</button>
+        <button id="toggleExtras" class="btn secondary small">☰</button>
+        <div class="menu-hint" id="menuHint">Mở menu công cụ tại đây!</div>
+      </div>
+    </div>
+    <textarea id="textarea" placeholder="Dán văn bản của bạn vào đây..."></textarea>
+    <div class="toolbar">
+        <button id="undoBtn" class="btn secondary small" title="Undo">↶</button>
+        <button id="redoBtn" class="btn secondary small" title="Redo">↷</button>
+      <div style="margin-left:auto">
+        <button id="exportTxt" class="btn small">💾 .TXT</button>
+        <button id="exportDocx" class="btn small">📄 .DOCX</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="section">
+      <h3 id="titleStats">Thống kê</h3>
+      <div class="grid-stats">
+        <div class="stat"><div class="num" id="statWords">0</div><div class="label" id="lblWords">Từ</div></div>
+        <div class="stat"><div class="num" id="statChars">0</div><div class="label" id="lblChars">Ký tự</div></div>
+        <div class="stat"><div class="num" id="statSentences">0</div><div class="label" id="lblSentences">Câu</div></div>
+        <div class="stat"><div class="num" id="statParagraphs">0</div><div class="label" id="lblParagraphs">Đoạn</div></div>
+        <div class="stat"><div class="num" id="statLines">0</div><div class="label" id="lblLines">Dòng</div></div>
+        <div class="stat"><div class="num" id="statTime">0.0s</div><div class="label" id="lblTime">Thời gian đọc</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <h3 id="titleQuick">Thao tác nhanh</h3>
+      <div class="tools-grid">
+        <button id="btnCopy" class="btn small">📋 Sao chép</button>
+        <button id="btnClear" class="btn secondary small">🧹 Xóa</button>
+        <button id="btnFindReplace" class="btn secondary small">🔍 Tìm kiếm & sửa đổi</button>
+        <button id="btnUpper" class="btn secondary small">🔠 IN HOA</button>
+        <button id="btnLower" class="btn secondary small">🔡 in thường</button>
+        <button id="btnTitle" class="btn secondary small">🅣 Viết Hoa</button>
+      </div>
+    </div>
+    <div class="section">
+      <h3 id="titleFreq">Top 5 từ phổ biến</h3>
+      <div id="freqList" style="margin-top:8px"></div>
+    </div>
+    <div class="section">
+      <h3 id="titleLongest">Top 5 từ dài nhất</h3>
+      <div id="longList"></div>
+    </div>
+    <div class="footer" id="footerCopyright">© CountNKt • <span id="year"></span></div>
+  </div>
+</div>
+
+<div id="overlay"></div>
+<div class="extras-panel" id="extrasPanel">
+  <div class="extras-panel-header">
+    <h3 id="titleExtrasPanel">Công cụ Mở rộng</h3>
+    <button id="closeExtras" class="close-btn">&times;</button>
+  </div>
+  <div class="section">
+      <h3 id="titleReadability">Phân tích khả năng đọc</h3>
+      <div class="stat" style="padding: 16px;">
+          <div class="num" id="statReadability">0.0</div>
+          <div class="label" id="lblReadability">Điểm Flesch Reading Ease</div>
+          <div class="small" style="margin-top: 8px;" id="descReadability">(Càng cao càng dễ đọc. >60 là ổn.)</div>
+      </div>
+  </div>
+  <div class="section">
+      <h3 id="titleExtraTools">Công cụ bổ trợ</h3>
+      <div class="tools-grid">
+          <button id="btnInverseCase" class="btn secondary small">NGHỊCH ĐẢO CHỮ</button>
+          <button id="btnRemoveSpaces" class="btn secondary small">Xóa khoảng trắng thừa</button>
+      </div>
+  </div>
+  <div class="section">
+      <h3 id="titleHistory">Lịch sử</h3>
+      <div id="history" style="max-height:250px;overflow:auto"></div>
+  </div>
+</div>
+
+
+<script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
+
+<script>
+(() => {
+  const textarea = document.getElementById('textarea');
+  const statReadability = document.getElementById('statReadability');
+  const freqList = document.getElementById('freqList');
+  const longList = document.getElementById('longList');
+  const historyEl = document.getElementById('history');
+  const btnCopy = document.getElementById('btnCopy');
+  const btnClear = document.getElementById('btnClear');
+  const btnFindReplace = document.getElementById('btnFindReplace');
+  const btnUpper = document.getElementById('btnUpper');
+  const btnLower = document.getElementById('btnLower');
+  const btnTitle = document.getElementById('btnTitle');
+  const undoBtn = document.getElementById('undoBtn');
+  const redoBtn = document.getElementById('redoBtn');
+  const themeToggle = document.getElementById('themeToggle');
+  const uiLang = document.getElementById('uiLang');
+  const btnInverseCase = document.getElementById('btnInverseCase');
+  const btnRemoveSpaces = document.getElementById('btnRemoveSpaces');
+  const yearEl = document.getElementById('year');
+  const exportTxt = document.getElementById('exportTxt');
+  const exportDocx = document.getElementById('exportDocx');
+  const toggleExtras = document.getElementById('toggleExtras');
+  const extrasPanel = document.getElementById('extrasPanel');
+  const closeExtras = document.getElementById('closeExtras');
+  const overlay = document.getElementById('overlay');
+  const menuHint = document.getElementById('menuHint');
+  
+  const state = { undoStack: [], redoStack: [], history: [] };
+  
+  const i18n = {
+    vi: {
+        stats:'Thống kê', words:'Từ', chars:'Ký tự', sentences:'Câu', paragraphs:'Đoạn', lines:'Dòng', read_time:'Thời gian đọc',
+        quick:'Thao tác nhanh', copy:'Sao chép', clear:'Xóa', find:'Tìm kiếm & sửa đổi', findPrompt:'Tìm (phân biệt chữ hoa/thường):', replacePrompt:'Thay thế bằng:', copyError:'Không thể sao chép', upper:'IN HOA', lower:'in thường', title:'Viết Hoa',
+        topFreq:'Top 5 từ phổ biến', topLongest:'Top 5 từ dài nhất',
+        readability:'Phân tích khả năng đọc', score:'Điểm Flesch Reading Ease', desc:'(Càng cao càng dễ đọc. >60 là ổn.)',
+        extraTools:'Công cụ bổ trợ', inverse:'NGHỊCH ĐẢO CHỮ', removeSpaces:'Xóa khoảng trắng thừa',
+        history:'Lịch sử',
+        extrasTitle: 'Công cụ Mở rộng', noData: 'Chưa có dữ liệu...', exportError: 'Không thể xuất DOCX',
+        placeholder:'Dán văn bản của bạn vào đây...',
+        titleUndo:'Hoàn tác', titleRedo:'Làm lại', titleTheme:'Đổi giao diện', titleLangUI:'Ngôn ngữ giao diện'
+    },
+    en: {
+        stats:'Statistics', words:'Words', chars:'Characters', sentences:'Sentences', paragraphs:'Paragraphs', lines:'Lines', read_time:'Reading Time',
+        quick:'Quick Actions', copy:'Copy', clear:'Clear', find:'Search & Modify', findPrompt:'Find (case-sensitive):', replacePrompt:'Replace with:', copyError:'Could not copy', upper:'UPPERCASE', lower:'lowercase', title:'Title Case',
+        topFreq:'Top 5 Frequent Words', topLongest:'Top 5 Longest Words',
+        readability:'Readability Analysis', score:'Flesch Reading Ease Score', desc:'(Higher is easier. >60 is good.)',
+        extraTools:'Extra Tools', inverse:'iNVERSE cASE', removeSpaces:'Remove Extra Spaces',
+        history:'History',
+        extrasTitle: 'Extra Tools', noData: 'No data yet...', exportError: 'Could not export DOCX',
+        placeholder:'Paste your text here...',
+        titleUndo:'Undo', titleRedo:'Redo', titleTheme:'Toggle theme', titleLangUI:'UI Language'
+    },
+    es: {
+        stats:'Estadísticas', words:'Palabras', chars:'Caracteres', sentences:'Frases', paragraphs:'Párrafos', lines:'Líneas', read_time:'Tiempo de lectura',
+        quick:'Acciones rápidas', copy:'Copiar', clear:'Limpiar', find:'Buscar y modificar', findPrompt:'Buscar (distingue mayúsculas/minúsculas):', replacePrompt:'Reemplazar con:', copyError:'No se pudo copiar', upper:'MAYÚSCULAS', lower:'minúsculas', title:'Título',
+        topFreq:'Top 5 palabras frecuentes', topLongest:'Top 5 palabras más largas',
+        readability:'Análisis de legibilidad', score:'Puntuación Flesch', desc:'(Más alto es más fácil. >60 está bien.)',
+        extraTools:'Herramientas extra', inverse:'iNVERTIR cASO', removeSpaces:'Eliminar espacios extra',
+        history:'Historial',
+        extrasTitle: 'Herramientas Extra', noData: 'No hay datos...', exportError: 'No se pudo exportar DOCX',
+        placeholder:'Pega tu texto aquí...',
+        titleUndo:'Deshacer', titleRedo:'Rehacer', titleTheme:'Cambiar tema', titleLangUI:'Idioma de la interfaz'
+    },
+    fr: {
+        stats:'Statistiques', words:'Mots', chars:'Caractères', sentences:'Phrases', paragraphs:'Paragraphes', lines:'Lignes', read_time:'Temps de lecture',
+        quick:'Actions rapides', copy:'Copier', clear:'Effacer', find:'Rechercher et modifier', findPrompt:'Chercher (sensible à la casse):', replacePrompt:'Remplacer par:', copyError:'Copie impossible', upper:'MAJUSCULES', lower:'minuscules', title:'Titre',
+        topFreq:'Top 5 mots fréquents', topLongest:'Top 5 mots les plus longs',
+        readability:'Analyse de lisibilité', score:'Score de Flesch', desc:'(Plus haut c\'est facile. >60 c\'est bien.)',
+        extraTools:'Outils supplémentaires', inverse:'iNVERSER la CASSE', removeSpaces:'Supprimer les espaces',
+        history:'Historique',
+        extrasTitle: 'Outils Supplémentaires', noData: 'Aucune donnée...', exportError: 'Impossible d\'exporter DOCX',
+        placeholder:'Collez votre texte ici...',
+        titleUndo:'Annuler', titleRedo:'Rétablir', titleTheme:'Changer de thème', titleLangUI:'Langue de l\'interface'
+    },
+    de: {
+        stats:'Statistiken', words:'Wörter', chars:'Zeichen', sentences:'Sätze', paragraphs:'Absätze', lines:'Zeilen', read_time:'Lesezeit',
+        quick:'Schnelle Aktionen', copy:'Kopieren', clear:'Löschen', find:'Suchen & Ändern', findPrompt:'Suchen (Groß-/Kleinschreibung beachten):', replacePrompt:'Ersetzen durch:', copyError:'Kopieren fehlgeschlagen', upper:'GROSSBUCHSTABEN', lower:'kleinbuchstaben', title:'Titel',
+        topFreq:'Top 5 häufigste Wörter', topLongest:'Top 5 längste Wörter',
+        readability:'Lesbarkeitsanalyse', score:'Flesch-Index', desc:'(Höher ist einfacher. >60 ist gut.)',
+        extraTools:'Zusätzliche Werkzeuge', inverse:'uMGEKEHRTE sCHREIBUNG', removeSpaces:'Leerzeichen entfernen',
+        history:'Verlauf',
+        extrasTitle: 'Zusätzliche Werkzeuge', noData: 'Keine Daten...', exportError: 'DOCX konnte nicht exportiert werden',
+        placeholder:'Fügen Sie Ihren Text hier ein...',
+        titleUndo:'Rückgängig', titleRedo:'Wiederholen', titleTheme:'Thema wechseln', titleLangUI:'Sprache der Benutzeroberfläche'
+    },
+    zh: {
+        stats:'统计', words:'词', chars:'字符', sentences:'句子', paragraphs:'段落', lines:'行', read_time:'阅读时间',
+        quick:'快速操作', copy:'复制', clear:'清除', find:'查找和修改', findPrompt:'查找 (区分大小写):', replacePrompt:'替换为:', copyError:'无法复制', upper:'大写', lower:'小写', title:'标题格式',
+        topFreq:'前5个常用词', topLongest:'前5个最长词',
+        readability:'可读性分析', score:'Flesch 可读性分数', desc:'(分数越高越容易。>60为佳。)',
+        extraTools:'额外工具', inverse:'大小写反转', removeSpaces:'删除多余空格',
+        history:'历史记录',
+        extrasTitle: '额外工具', noData: '暂无数据...', exportError: '无法导出 DOCX',
+        placeholder:'在此处粘贴您的文本...',
+        titleUndo:'撤消', titleRedo:'重做', titleTheme:'切换主题', titleLangUI:'界面语言'
+    },
+    ja: {
+        stats:'統計', words:'単語', chars:'文字', sentences:'文', paragraphs:'段落', lines:'行', read_time:'読了時間',
+        quick:'クイックアクション', copy:'コピー', clear:'クリア', find:'検索と修正', findPrompt:'検索 (大文字と小文字を区別):', replacePrompt:'置換後の文字列:', copyError:'コピーできませんでした', upper:'大文字', lower:'小文字', title:'タイトルケース',
+        topFreq:'頻出単語トップ5', topLongest:'最も長い単語トップ5',
+        readability:'可読性分析', score:'Flesch 可読性スコア', desc:'(高いほど簡単。>60が良い。)',
+        extraTools:'追加ツール', inverse:'大文字と小文字を反転', removeSpaces:'余分なスペースを削除',
+        history:'履歴',
+        extrasTitle: '追加ツール', noData: 'データがありません...', exportError: 'DOCX をエクスポートできませんでした',
+        placeholder:'ここにテキストを貼り付け...',
+        titleUndo:'元に戻す', titleRedo:'やり直し', titleTheme:'テーマを切り替え', titleLangUI:'UI言語'
+    }
+  };
+  const langOptions = { vi: 'Tiếng Việt', en: 'English', es: 'Español', fr: 'Français', de: 'Deutsch', zh: '中文', ja: '日本語' };
+  
+  yearEl.textContent = new Date().getFullYear();
+  if (localStorage.getItem('countnkt_theme') === 'dark') { document.body.classList.remove('light'); } 
+  else { document.body.classList.add('light'); }
+  Object.keys(langOptions).forEach(key => {
+      const option = document.createElement('option');
+      option.value = key;
+      option.textContent = langOptions[key];
+      uiLang.appendChild(option);
+  });
+  if(localStorage.getItem('countnkt_lang')) uiLang.value = localStorage.getItem('countnkt_lang');
+  
+  if (!localStorage.getItem('countnkt_hint_shown')) {
+      setTimeout(() => { menuHint.classList.add('show'); toggleExtras.classList.add('pulse'); }, 1500);
+      setTimeout(() => {
+          menuHint.classList.remove('show');
+          toggleExtras.classList.remove('pulse');
+      }, 7000);
+  }
+
+  const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+  const escapeHtml = (s) => String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": "&#39;" }[m]));
+
+  const countSyllables = (word) => {
+      word = word.toLowerCase();
+      if(word.length <= 3) return 1;
+      word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
+      word = word.replace(/^y/, '');
+      const matches = word.match(/[aeiouy]{1,2}/g);
+      return matches ? matches.length : 0;
+  };
+  const calculateReadability = (words, sentences, syllables) => {
+    if (words === 0 || sentences === 0) return 0.0;
+    const score = 206.835 - 1.015 * (words / sentences) - 84.6 * (syllables / words);
+    return Math.max(0, Math.min(100, score));
+  };
+  const analyze = (text) => {
+    const trimmed = text.trim();
+    const words = trimmed ? trimmed.match(/\p{L}[\p{L}\p{M}'’\-]*/gu) || [] : [];
+    const sentences = trimmed ? trimmed.match(/[^.!?…]+[.!?…]+/g) || [] : [];
+    const paragraphs = trimmed ? text.split(/\n\s*\n/).filter(p => p.trim() !== '') : [];
+    const lines = text.split('\n');
+    const syllables = words.reduce((acc, word) => acc + countSyllables(word), 0);
+    return { text, words, sentences, paragraphs, lines, syllables };
+  };
+
+  const updateAll = debounce(() => {
+    const txt = textarea.value || '';
+    const an = analyze(txt);
+    document.getElementById('statWords').textContent = an.words.length;
+    document.getElementById('statChars').textContent = an.text.length;
+    document.getElementById('statSentences').textContent = an.sentences.length || (an.words.length > 0 ? 1 : 0);
+    document.getElementById('statParagraphs').textContent = an.paragraphs.length || (an.words.length > 0 ? 1 : 0);
+    document.getElementById('statLines').textContent = an.lines.length;
+    document.getElementById('statTime').textContent = formatReadingTime(an.words.length);
+    statReadability.textContent = calculateReadability(an.words.length, an.sentences.length, an.syllables).toFixed(1);
+    updateKeywords(an.words);
+    saveHistory(an.text);
+  }, 250);
+  
+  function formatReadingTime(wordCount) {
+    const wpm = 238;
+    const secondsTotal = (wordCount / wpm) * 60;
+    if (secondsTotal < 60) {
+        return `${secondsTotal.toFixed(1)}s`;
+    } else if (secondsTotal < 3600) {
+        const mins = Math.floor(secondsTotal / 60);
+        const secs = Math.round(secondsTotal % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    } else {
+        const hours = Math.floor(secondsTotal / 3600);
+        const mins = Math.round((secondsTotal % 3600) / 60);
+        return `${hours}h ${mins}m`;
+    }
+  }
+
+  function updateKeywords(words){
+    const total = words.length;
+    const freq = {};
+    words.forEach(w=>{ const key = w.toLowerCase(); if (key.length<=1) return; freq[key] = (freq[key]||0)+1; });
+    const freqArr = Object.entries(freq).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).slice(0,5);
+    renderKeywordList(freqList, freqArr.map(([k,v])=>({k,v})), total, 'freq');
+    const unique = Object.keys(freq);
+    const longArr = unique.sort((a,b)=>b.length-a.length).slice(0,5);
+    renderKeywordList(longList, longArr.map(k=>({k,v:k.length})), 0, 'length');
+  }
+  function renderKeywordList(container, items, totalWords=0, type='freq'){
+    container.innerHTML = '';
+    if (!items || items.length===0){
+      container.innerHTML = `<div class="small">${(i18n[uiLang.value] || i18n.vi).noData}</div>`; return;
+    }
+    const ul = document.createElement('ul'); ul.className='keyword-list';
+    const maxVal = items.reduce((m,i)=>(i.v>m?i.v:m),0) || 1;
+    items.forEach(it=>{
+      const name = escapeHtml(it.k);
+      const value = it.v;
+      const percent = totalWords>0 && type==='freq' ? ((value/totalWords)*100).toFixed(1) + '%' : '';
+      const ratio = Math.round((value / maxVal) * 100);
+      const li = document.createElement('li');
+      li.innerHTML = `<div style="flex:1;min-width:0;overflow:hidden;display:flex;align-items:center;gap:8px;"><strong style="display:block;white-space:nowrap;text-overflow:ellipsis;overflow:hidden" title="${name}">${name}</strong><div class="small">${percent}</div></div>
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <div style="min-width:36px;text-align:right">${value}</div>
+                        <div class="bar"><div class="bar-fill" style="width:${ratio}%"></div></div>
+                      </div>`;
+      ul.appendChild(li);
+    });
+    container.appendChild(ul);
+  }
+
+  function saveHistory(text){
+    if (!text.trim()) return;
+    if (state.history.length && state.history[state.history.length-1].text===text) return;
+    state.history.push({text, time: new Date().toLocaleTimeString()});
+    if (state.history.length>30) state.history.shift();
+    renderHistory();
+  }
+  function renderHistory(){
+    historyEl.innerHTML='';
+    [...state.history].reverse().forEach((h)=>{
+      const li = document.createElement('div');
+      li.style.cssText = 'padding:8px; border-bottom:1px solid rgba(255,255,255,0.02); cursor:pointer;';
+      const displayText = `${h.time} — ${h.text.substring(0,80)}${h.text.length>80?'...':''}`;
+      li.textContent = displayText;
+      li.title = h.text;
+      li.onclick = ()=>{ pushUndo(); textarea.value = h.text; updateAll(); };
+      historyEl.appendChild(li);
+    });
+  }
+
+  const pushUndo = () => {
+    const cur = textarea.value;
+    if (state.undoStack.length === 0 || state.undoStack[state.undoStack.length - 1] !== cur) {
+        state.undoStack.push(cur);
+        if (state.undoStack.length > 200) state.undoStack.shift();
+        state.redoStack = [];
+    }
+  };
+
+  textarea.addEventListener('input', () => { pushUndo(); updateAll(); });
+  undoBtn.addEventListener('click', () => { if (state.undoStack.length > 1) { state.redoStack.push(state.undoStack.pop()); textarea.value = state.undoStack[state.undoStack.length - 1] || ''; updateAll(); } });
+  redoBtn.addEventListener('click', () => { if (state.redoStack.length > 0) { const next = state.redoStack.pop(); textarea.value = next; state.undoStack.push(next); updateAll(); } });
+  btnClear.addEventListener('click', () => { const t = i18n[uiLang.value] || i18n.vi; if (!confirm(t.clear + '?')) return; pushUndo(); textarea.value = ''; updateAll(); });
+  btnCopy.addEventListener('click', async () => { const t = i18n[uiLang.value] || i18n.vi; try { await navigator.clipboard.writeText(textarea.value); alert(t.copy + '!'); } catch (e) { alert(t.copyError); } });
+  btnFindReplace.addEventListener('click', () => { const t = i18n[uiLang.value] || i18n.vi; const f = prompt(t.findPrompt); if(f===null) return; const r = prompt(t.replacePrompt); if(r===null) return; pushUndo(); textarea.value = textarea.value.split(f).join(r); updateAll(); });
+  btnUpper.addEventListener('click', () => { pushUndo(); textarea.value = textarea.value.toUpperCase(); updateAll(); });
+  btnLower.addEventListener('click', () => { pushUndo(); textarea.value = textarea.value.toLowerCase(); updateAll(); });
+  btnTitle.addEventListener('click', () => { pushUndo(); textarea.value = textarea.value.toLowerCase().replace(/\b\p{L}/gu, c => c.toUpperCase()); updateAll(); });
+  btnInverseCase.addEventListener('click', () => { pushUndo(); textarea.value = [...textarea.value].map(c => c === c.toUpperCase() ? c.toLowerCase() : c.toUpperCase()).join(''); updateAll(); });
+  btnRemoveSpaces.addEventListener('click', () => { pushUndo(); textarea.value = textarea.value.replace(/ +/g, ' ').trim(); updateAll(); });
+  themeToggle.addEventListener('click', () => { document.body.classList.toggle('light'); localStorage.setItem('countnkt_theme', document.body.classList.contains('light') ? 'light' : 'dark'); });
+  exportTxt.addEventListener('click', ()=>{ const blob = new Blob([textarea.value], {type:'text/plain;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='CountNKT.txt'; a.click(); });
+  exportDocx.addEventListener('click', async ()=>{ try{ const { Document, Packer, Paragraph } = docx; const doc = new Document({ sections: [{ children: textarea.value.split('\n').map(p => new Paragraph(p)) }] }); const blob = await Packer.toBlob(doc); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='CountNKT.docx'; a.click(); }catch(e){ console.error(e); alert(i18n[uiLang.value]?.exportError || 'Could not export.'); }});
+  
+  const openMenu = () => { extrasPanel.classList.add('show'); overlay.classList.add('show'); };
+  const closeMenu = () => { extrasPanel.classList.remove('show'); overlay.classList.remove('show'); };
+  toggleExtras.addEventListener('click', () => {
+    openMenu();
+    if (menuHint.classList.contains('show')) {
+        menuHint.classList.remove('show');
+        toggleExtras.classList.remove('pulse');
+        localStorage.setItem('countnkt_hint_shown', 'true');
+    }
+  });
+  closeExtras.addEventListener('click', closeMenu);
+  overlay.addEventListener('click', closeMenu);
+  
+  const translateUI = (lang) => {
+    localStorage.setItem('countnkt_lang', lang);
+    const t = i18n[lang] || i18n.vi;
+    document.documentElement.lang = lang.split('-')[0];
+    const elementsToTranslate = {
+        'titleStats': 'stats', 'lblWords': 'words', 'lblChars': 'chars', 'lblSentences': 'sentences', 'lblParagraphs': 'paragraphs', 'lblLines': 'lines', 'lblTime': 'read_time',
+        'titleQuick': 'quick', 'titleFreq': 'topFreq', 'titleLongest': 'topLongest',
+        'titleExtrasPanel': 'extrasTitle', 'titleReadability': 'readability', 'lblReadability': 'score', 'descReadability': 'desc', 'titleExtraTools': 'extraTools', 'titleHistory': 'history'
+    };
+    for(const id in elementsToTranslate){
+        const el = document.getElementById(id);
+        if(el) el.textContent = t[elementsToTranslate[id]];
+    }
+
+    btnCopy.firstChild.nodeValue = '📋 ' + t.copy;
+    btnClear.firstChild.nodeValue = '🧹 ' + t.clear;
+    btnFindReplace.firstChild.nodeValue = '🔍 ' + t.find;
+    btnUpper.firstChild.nodeValue = '🔠 ' + t.upper;
+    btnLower.firstChild.nodeValue = '🔡 ' + t.lower;
+    btnTitle.firstChild.nodeValue = '🅣 ' + t.title;
+    btnInverseCase.textContent = t.inverse;
+    btnRemoveSpaces.textContent = t.removeSpaces;
+    textarea.placeholder = t.placeholder;
+
+    // Translate titles
+    undoBtn.title = t.titleUndo;
+    redoBtn.title = t.titleRedo;
+    themeToggle.title = t.titleTheme;
+    uiLang.title = t.titleLangUI;
+  };
+  uiLang.addEventListener('change', (e) => translateUI(e.target.value));
+  
+  translateUI(uiLang.value);
+  pushUndo();
+  updateAll();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) updateAll(); });
+
+})();
+</script>
+</body>
+</html>
