@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://aimusic5775-sys.github.io/CountNKT/sitemap.xml
+Sitemap: https://nkt5775.github.io/CountNKT/sitemap.xml
